@@ -1,26 +1,34 @@
-from numpy import *
+import numpy as np
 
 """
-QR Factorization via Classical Gram Schmidt
+QR Factorization via Classical Gram Schmidt (unstable)
 
+Example 1: A is a complex 3x2 matrix with full column rank
+>>> A = np.array([[1 + 2.1j, 2.1 + 3.1j],[2.7 + .1j, 3.1 + .2j],[4.1, 2.3j]])
+>>> Q,R = gs(A)
+>>> np.linalg.norm(Q.dot(R) - A) < eps
+True
+>>> np.abs(inner(Q[:,0],Q[:,1])) < 2.*eps
+True
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < eps
+True
 
->>> a = array([[1 + 2.1j, 2.1 + 3.1j],[2.7 + .1j, 3.1 + .2j],[4.1, 2.3j]])
->>> a
-array([[ 1.0+2.1j,  2.1+3.1j],
-       [ 2.7+0.1j,  3.1+0.2j],
-       [ 4.1+0.j ,  0.0+2.3j]])
->>> q,r = gs(a)
->>> q.dot(r)
-array([[  1.00000000e+00+2.1j,   2.10000000e+00+3.1j],
-       [  2.70000000e+00+0.1j,   3.10000000e+00+0.2j],
-       [  4.10000000e+00+0.j ,  -1.51996096e-16+2.3j]])
+Example 2 A is a 3x3 real matrix with linearly dependent columns
+>>> A = np.array([1.,2.,3.])[:,np.newaxis]
+>>> A = A.dot(A.T)
+>>> Q,R = gs(A)
+lin dep column found with j=1
+lin dep column found with j=2
+>>> np.linalg.norm(Q.dot(R) - A) < 32*eps
+True
+>>> np.abs(inner(Q[:,0],Q[:,1])) < eps
+True
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2*eps
+True
+
 """
 
 eps = 2**-52
-def norm(v):
-    """return the 2-norm of a complex vector
-    """
-    return sqrt(abs(inner(v,v)))
 
 def inner(v,w):
     """return the inner product of two vectors
@@ -29,25 +37,28 @@ def inner(v,w):
     return v.conj().dot(w)
 
 def gs(a):
-    m,n = shape(a)
-    r = zeros((n,n),dtype='complex')
-    q = zeros((m,n),dtype='complex')
-    v = zeros((m,n),dtype='complex')
+    m,n = np.shape(a)
+    tp = a.dtype
+    r = np.zeros((n,n),dtype=tp)
+    q = np.zeros((m,n),dtype=tp)
+    v = np.zeros((m,n),dtype=tp)
     for j in range(n):
         v[:,j] = a[:,j]
-        update(a[:,j],v,q,r,j)
-        if r[j,j] < eps:
-            aj = random.rand(m)
-            v[:,j]=aj
-            update(aj,v,q,r,j)
-        q[:,j] = v[:,j] / r[j,j]
+        for i in range(j):
+            r[i,j] = inner(q[:,i], a[:,j])
+            v[:,j] = v[:,j] - r[i,j]*q[:,i]
+        r[j,j] = np.linalg.norm(v[:,j])
+        if r[j,j] < 32*eps:
+            print("lin dep column found with j=%d" % j)
+            z = np.random.rand(m)
+            v[:,j] = z
+            for i in range(j):
+                x = inner(q[:,i], z)
+                v[:,j] = v[:,j] - x*q[:,i]
+            q[:,j] = v[:,j] / linalg.norm(v[:,j])
+        else:
+            q[:,j] = v[:,j] / r[j,j]
     return q, r
-
-def update(aj,v,q,r,j):
-    for i in range(j):
-        r[i,j] = inner(q[:,i], aj)
-        v[:,j] -= r[i,j]*q[:,i]
-    r[j,j] = norm(v[:,j])
 
 
 if __name__ == "__main__":
