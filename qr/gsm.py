@@ -1,29 +1,76 @@
-from numpy import *
+import numpy as np
 
 """
-QR Factorization via Classical Gram Schmidt
+QR Factorization via Modified Gram Schmidt 
 
+Example 1: A is a complex 3x2 matrix with full column rank
+>>> A = np.array([[1 + 2.1j, 2.1 + 3.1j],[2.7 + .1j, 3.1 + .2j],[4.1, 2.3j]])
+>>> Q,R = gsm(A)
+>>> np.linalg.norm(Q.dot(R) - A) < eps
+True
+>>> np.abs(inner(Q[:,0],Q[:,1])) < 2.*eps
+True
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < eps
+True
 
->>> a = array([[1 + 2.1j, 2.1 + 3.1j],[2.7 + .1j, 3.1 + .2j],[4.1, 2.3j]])
->>> a
-array([[ 1.0+2.1j,  2.1+3.1j],
-       [ 2.7+0.1j,  3.1+0.2j],
-       [ 4.1+0.j ,  0.0+2.3j]])
->>> q,r = gsm(a)
->>> q.dot(r)
-array([[  1.00000000e+00+2.1j,   2.10000000e+00+3.1j],
-       [  2.70000000e+00+0.1j,   3.10000000e+00+0.2j],
-       [  4.10000000e+00+0.j ,  -1.51996096e-16+2.3j]])
+Example 2: A is a 3x3 real matrix with linearly dependent columns
+>>> A = np.array([1.,2.,3.])[:,np.newaxis]
+>>> A = A.dot(A.T)
+>>> Q,R = gsm(A)
+>>> np.linalg.norm(Q.dot(R) - A) < 4*eps
+True
+>>> np.abs(inner(Q[:,0],Q[:,1])) < 4*eps
+True
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2*eps
+True
 
->>> abs(inner(q[:,0],q[:,1]))
-3.7341307954279784e-16
+Example 3: A is a 3x3 real matrix with one column of zeros
+>>> A = np.array([[1,2,3],[0,0,0],[3,2,1]]).T+0.0
+>>> Q,R = gsm(A)
+>>> np.linalg.norm(Q.dot(R) - A) < 4*eps
+True
+>>> np.abs(inner(Q[:,0],Q[:,1])) < 2*eps
+True
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2*eps
+True
 """
 
 eps = 2**-52
-def norm(v):
-    """return the 2-norm of a complex vector
+
+def gsm(a,dbg=False):
+    """modified gram-schmidt (reduced)
+       takes a complex matrix of any shape and computes its
+       QR factorization using the modified Gram-Schmidt factorization
+       Handles the case; input matrix doesn't have full Column rank 
+    """ 
+    m,n = np.shape(a)
+    tp = a.dtype
+    r = np.zeros((n,n),dtype=tp)
+    q = np.zeros((m,n),dtype=tp)
+    v = a.copy()
+    for i in range(n):
+        r[i,i] = np.linalg.norm(v[:,i])
+        if r[i,i] < 2*eps:
+            if dbg: print("lin dep column found with i=%d" % i)
+            q[:,i] = random_orthonormal(q,i)
+        else:
+            q[:,i] = v[:,i] / r[i,i]
+        for j in range(i+1,n):
+            r[i,j] = inner(q[:,i],v[:,j])
+            v[:,j] -= r[i,j]*q[:,i]
+    return q, r
+
+def random_orthonormal(q,i):
+    """get a random unit length vector orthonormal to the 
+       first i-1 columns of q
     """
-    return sqrt(abs(inner(v,v)))
+    m,n=np.shape(q)
+    z = np.random.rand(m)
+    v = z[:]
+    for j in range(i):
+        x = inner(q[:,j],v)
+        v -= x*q[:,j]
+    return v / np.linalg.norm(v)
 
 def inner(v,w):
     """return the inner product of two vectors
@@ -31,20 +78,6 @@ def inner(v,w):
     """
     return v.conj().dot(w)
 
-def gsm(a):
-    m,n = shape(a)
-    r = zeros((n,n),dtype='complex')
-    q = zeros((m,n),dtype='complex')
-    v = zeros((m,n),dtype='complex')
-    for i in range(n):
-        v[:,i] = a[:,i]
-    for i in range(n):
-        r[i,i] = norm(v[:,i])
-        q[:,i] = v[:,i]/r[i,i]
-        for j in range(i+1,n):
-            r[i,j] = inner(q[:,i],v[:,j])
-            v[:,j] -= r[i,j]*q[:,i]
-    return q, r
 
 if __name__ == "__main__":
     import doctest

@@ -15,6 +15,6 @@ A = U.dot(S).dot(V)
 QC,RC = gs.gs(A)
 QM,RM = gsm.gsm(A)
 
-plt.plot(range(80), log(diag(RC)),'bs',log(diag(RM)),'ro')
+plt.semilogy(range(80), diag(RC),'bs',diag(RM),'ro')
 plt.show()
 

@@ -13,30 +13,24 @@ True
 >>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < eps
 True
 
-Example 2 A is a 3x3 real matrix with linearly dependent columns
+Example 2: A is a 3x3 real matrix with linearly dependent columns
 >>> A = np.array([1.,2.,3.])[:,np.newaxis]
 >>> A = A.dot(A.T)
 >>> Q,R = gs(A)
-lin dep column found with j=1
-lin dep column found with j=2
 >>> np.linalg.norm(Q.dot(R) - A) < 32*eps
 True
->>> np.abs(inner(Q[:,0],Q[:,1])) < eps
+>>> np.abs(inner(Q[:,0],Q[:,1])) < 2*eps
 True
->>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2*eps
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 4*eps
 True
-
 """
 
 eps = 2**-52
 
-def inner(v,w):
-    """return the inner product of two vectors
-       using the convention of conjugating the first argument
+def gs(a,dbg=False):
+    """Classical Gram-Schmidt factorizaton
+       takes an mxn complex matrix and returns a QR factorization
     """
-    return v.conj().dot(w)
-
-def gs(a):
     m,n = np.shape(a)
     tp = a.dtype
     r = np.zeros((n,n),dtype=tp)
@@ -46,19 +40,32 @@ def gs(a):
         v[:,j] = a[:,j]
         for i in range(j):
             r[i,j] = inner(q[:,i], a[:,j])
-            v[:,j] = v[:,j] - r[i,j]*q[:,i]
+            v[:,j] -= r[i,j]*q[:,i]
         r[j,j] = np.linalg.norm(v[:,j])
         if r[j,j] < 32*eps:
-            print("lin dep column found with j=%d" % j)
-            z = np.random.rand(m)
-            v[:,j] = z
-            for i in range(j):
-                x = inner(q[:,i], z)
-                v[:,j] = v[:,j] - x*q[:,i]
-            q[:,j] = v[:,j] / linalg.norm(v[:,j])
+            if dbg: print("lin dep column found with j=%d" % j)
+            q[:,j] = random_orthonormal(q,j)
         else:
             q[:,j] = v[:,j] / r[j,j]
     return q, r
+
+def random_orthonormal(q,i):
+    """get a random unit length vector orthonormal to the 
+       first i-1 columns of q
+    """
+    m,n=np.shape(q)
+    z = np.random.rand(m)
+    v = z[:]
+    for j in range(i):
+        x = inner(q[:,j],v)
+        v -= x*q[:,j]
+    return v / np.linalg.norm(v)
+
+def inner(v,w):
+    """return the inner product of two vectors
+       using the convention of conjugating the first argument
+    """
+    return v.conj().dot(w)
 
 
 if __name__ == "__main__":
