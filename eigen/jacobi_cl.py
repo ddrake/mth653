@@ -5,8 +5,8 @@ Iterating on jacobi() results in a diagonal matrix (of eigenvalues)
 Here is an example:
 
 >>> a = array([[ 1.41661717,  0.68604222,  0.79383087],
-...        [ 0.68604222,  0.83396481,  0.83610701],
-...        [ 0.79383087,  0.83610701,  0.19235399]])
+...            [ 0.68604222,  0.83396481,  0.83610701],
+...            [ 0.79383087,  0.83610701,  0.19235399]])
 >>> 
 >>> for i in range(10):
 ...     a = jacobi(a)
@@ -35,7 +35,7 @@ def jacobi(a):
     n,_ = shape(a)
     j,k = max_offdiag(a) 
     p,q,r = a[j,j], a[j,k], a[k,k]
-    th = arctan(2.0*q/(p-r))/2.0
+    th = arctan2(2.0*q,p-r)/2.0
     c, s = cos(th), sin(th)
     J = eye(n,n) 
     J[j,j] = c
