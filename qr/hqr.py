@@ -20,12 +20,29 @@ True
 >>> q = makeq(v)
 >>> linalg.norm(a - q.dot(r),'f') < 1.0e-15
 True
+>>> a = array([[ 0.04+0.46j,  0.02+0.61j,  0.55+0.87j],
+...            [ 0.94+0.69j,  1.00+0.94j,  0.17+0.24j],
+...            [ 0.07+0.52j,  0.48+0.48j,  0.07+0.49j]])
+>>> v,r = hqr(a)
+>>> linalg.norm(tril(r,-1),'f') < 1.0e-15
+True
+>>> q = makeq(v)
+>>> linalg.norm(a - q.dot(r),'f') < 2.0e-15
+True
 """
 
 from numpy import *
 
 def inner(v,w):
     return sum(v.conj() * w)
+
+def sgn(a):
+    """
+    To handle the complex case, we need to 
+    use this definition of the sign(a) instead of numpy.sign,
+    which just takes the sign of the real part.
+    """
+    return 1 if a == 0 else a/abs(a)
 
 def hqr(ao):
     """ 
@@ -36,8 +53,9 @@ def hqr(ao):
     v = zeros((m,n), dtype=complex)
     for k in range(n):
         x = a[k:,k].copy()
-        x[0] += sign(x[0])*linalg.norm(x,2)
-        vk = x[:,None] / linalg.norm(x,2)
+        nx = linalg.norm(x,2)
+        x[0] += sgn(x[0])*linalg.norm(x,2)
+        vk = x[:,None] / linalg.norm(x,2) #norm of changed x
         v[k:,k] = vk[:,0]
         # subtract (m-k+1)x(m-k+1) rank 1 submatrix from a
         a[k:,k:] -= 2*vk.dot(vk.conj().T.dot(a[k:,k:]))
