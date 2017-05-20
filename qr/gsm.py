@@ -10,16 +10,16 @@ Example 1: A is a complex 3x2 matrix with full column rank
 True
 >>> np.abs(inner(Q[:,0],Q[:,1])) < 2.*eps
 True
->>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < eps
+>>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2.*eps
 True
 
 Example 2: A is a 3x3 real matrix with linearly dependent columns
->>> A = np.array([1.,2.,3.])[:,np.newaxis]
->>> A = A.dot(A.T)
+>>> A = np.array([[1.,2.,3.]])
+>>> A = A.T.dot(A)
 >>> Q,R = gsm(A)
->>> np.linalg.norm(Q.dot(R) - A) < 4*eps
+>>> np.linalg.norm(Q.dot(R) - A) < 8*eps
 True
->>> np.abs(inner(Q[:,0],Q[:,1])) < 4*eps
+>>> np.abs(inner(Q[:,0],Q[:,1])) < 8*eps
 True
 >>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2*eps
 True
@@ -33,43 +33,46 @@ True
 True
 >>> np.abs(inner(Q[:,1],Q[:,1]) - 1.) < 2*eps
 True
+
+Note: test results may vary for Examples 2 and 3
+due to the random vectors added.
 """
 
 eps = 2**-52
 
-def gsm(a,dbg=False):
+def gsm(A,dbg=False):
     """modified gram-schmidt (reduced)
        takes a complex matrix of any shape and computes its
        QR factorization using the modified Gram-Schmidt factorization
        Handles the case; input matrix doesn't have full Column rank 
     """ 
-    m,n = np.shape(a)
-    tp = a.dtype
-    r = np.zeros((n,n),dtype=tp)
-    q = np.zeros((m,n),dtype=tp)
-    v = a.copy()
+    m,n = np.shape(A)
+    tp = A.dtype
+    R = np.zeros((n,n),dtype=tp)
+    Q = np.zeros((m,n),dtype=tp)
+    V = A.copy()
     for i in range(n):
-        r[i,i] = np.linalg.norm(v[:,i])
-        if r[i,i] < 2*eps:
+        R[i,i] = np.linalg.norm(V[:,i])
+        if R[i,i] < 2*eps:
             if dbg: print("lin dep column found with i=%d" % i)
-            q[:,i] = random_orthonormal(q,i)
+            Q[:,i] = random_orthonormal(Q,i)
         else:
-            q[:,i] = v[:,i] / r[i,i]
+            Q[:,i] = V[:,i] / R[i,i]
         for j in range(i+1,n):
-            r[i,j] = inner(q[:,i],v[:,j])
-            v[:,j] -= r[i,j]*q[:,i]
-    return q, r
+            R[i,j] = inner(Q[:,i],V[:,j])
+            V[:,j] -= R[i,j]*Q[:,i]
+    return Q, R
 
-def random_orthonormal(q,i):
+def random_orthonormal(Q,i):
     """get a random unit length vector orthonormal to the 
-       first i-1 columns of q
+       first i-1 columns of Q
     """
-    m,n=np.shape(q)
+    m,n=np.shape(Q)
     z = np.random.rand(m)
     v = z[:]
     for j in range(i):
-        x = inner(q[:,j],v)
-        v -= x*q[:,j]
+        x = inner(Q[:,j],v)
+        v -= x*Q[:,j]
     return v / np.linalg.norm(v)
 
 def inner(v,w):
@@ -77,6 +80,28 @@ def inner(v,w):
        using the convention of conjugating the first argument
     """
     return v.conj().dot(w)
+
+def bslv(R,c):
+    """
+    R should be upper triangular mxn with nonzero diagonal entries 
+    and c mx1.  Solves Rx = c by back substitution
+    """
+    tp = R.dtype
+    _,n = shape(R)
+    x = zeros(n,dtype=tp)
+    for i in range(n-1,-1,-1):
+        x[i] = (c[i]-R[i,i+1:].dot(x[i+1:])) / R[i,i]
+    return x
+
+def slv(A,b):
+    """
+    Solve linear system Ax = b
+    """
+    Q,R = gsm(A)
+    c = Q.T.dot(b)
+    x = bslv(R,c)
+    return x
+
 
 
 if __name__ == "__main__":
