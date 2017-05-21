@@ -1,40 +1,43 @@
 """
-This is the Jacobi Classical module
-the input array is assumed to be real and symmetric
-Iterating on jacobi() results in a diagonal matrix (of eigenvalues)
-Here is an example:
+Jacobi Classical algorithm
+the input array A is assumed to be real and symmetric
+Iterating on jacobi(A) results in a diagonal matrix (of eigenvalues)
 
->>> a = array([[ 1.41661717,  0.68604222,  0.79383087],
+>>> A = array([[ 1.41661717,  0.68604222,  0.79383087],
 ...            [ 0.68604222,  0.83396481,  0.83610701],
 ...            [ 0.79383087,  0.83610701,  0.19235399]])
->>> 
->>> for i in range(10):
-...     a = jacobi(a)
-...     print(off(a))
-... 
-2.20164275557
-0.1410452601
-0.0702475605258
-0.000310734313296
-1.48591033462e-05
-5.49097128878e-10
-4.92800492884e-16
-1.76185742945e-25
-3.35759108329e-33
-3.35759108329e-33
->>> a
-array([[  2.44031974e+00,   3.50324616e-46,   1.67864254e-51],
-       [ -5.03197756e-17,   4.39446423e-01,  -2.32857226e-21],
-       [ -2.51002319e-17,  -1.39817601e-17,  -4.36830189e-01]])
+
+>>> l, iters, offnorm = ews(A,True)
+>>> iters < 20
+True
+
 """
 
 from numpy import *
 
-# performs one classical Jacobi step, zeroing out two off-diagonal elements
-def jacobi(a):
-    n,_ = shape(a)
-    j,k = max_offdiag(a) 
-    p,q,r = a[j,j], a[j,k], a[k,k]
+def ews(A, details=False):
+    """
+    Returns the eigenvalues of A
+    """
+    offnorm = 1.0
+    iters = 0
+    while offnorm > 1.0e-15 and iters < 1000:
+        A = jacobi(A)
+        offnorm = off(A)
+        iters += 1
+    if details:
+        return diag(A), iters, offnorm
+    else:
+        return diag(A)
+
+
+def jacobi(A):
+    """
+    performs one classical Jacobi step, zeroing out two off-diagonal elements
+    """
+    n,_ = shape(A)
+    j,k = max_offdiag(A) 
+    p,q,r = A[j,j], A[j,k], A[k,k]
     th = arctan2(2.0*q,p-r)/2.0
     c, s = cos(th), sin(th)
     J = eye(n,n) 
@@ -42,24 +45,28 @@ def jacobi(a):
     J[k,k] = c
     J[j,k] = -s
     J[k,j] = s
-    return J.T.dot(a).dot(J)
+    return J.T.dot(A).dot(J)
 
-# returns the sorted indices of the max off-diagonal element
-def max_offdiag(a):
-    n,_ = shape(a)
+def max_offdiag(A):
+    """
+    returns the sorted indices of the max off-diagonal element
+    """
+    n,_ = shape(A)
     mx = -1.0e10
     for i in arange(n-1) + 1:
         for j in range(i):
-            aa = abs(a[i,j])
+            aa = abs(A[i,j])
             if aa > mx:
                 mxi, mxj = i,j
                 mx = aa
     std = sort([mxi, mxj]) # the order of these is important!
     return std[0], std[1]
 
-# square of Frobenius norm of offdiagonal elements
-def off(a):
-    return ((a - diag(diag(a)))**2).sum()
+def off(A):
+    """
+    square of Frobenius norm of offdiagonal elements
+    """
+    return linalg.norm(A - diag(diag(A)),'f')
 
 
 if __name__ == "__main__":
